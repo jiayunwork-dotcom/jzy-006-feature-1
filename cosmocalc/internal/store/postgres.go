@@ -55,6 +55,10 @@ func NewPostgresStore(ctx context.Context, dsn string) (*PostgresStore, error) {
 		db.Close()
 		return nil, fmt.Errorf("ensure schema: %w", err)
 	}
+	if _, err := db.ExecContext(ctx, catalogSchema); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("ensure catalog/report schema: %w", err)
+	}
 	return &PostgresStore{db: db}, nil
 }
 

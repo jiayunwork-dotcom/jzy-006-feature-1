@@ -11,11 +11,15 @@ import (
 	"sync"
 	"testing"
 
+	"cosmocalc/internal/lines"
+	"cosmocalc/internal/service"
 	"cosmocalc/internal/store"
 )
 
 func newTestServer() *Server {
-	return NewServer(store.NewMemStore())
+	registry := lines.NewRegistry(store.NewMemCatalogs())
+	identifySvc := service.NewIdentifyService(registry, store.NewMemReports())
+	return NewServer(store.NewMemStore(), registry, identifySvc)
 }
 
 func doReq(s *Server, method, path string, body any) (*httptest.ResponseRecorder, map[string]any, error) {

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"cosmocalc/internal/calc"
+	"cosmocalc/internal/lines"
 	"cosmocalc/internal/service"
 	"cosmocalc/internal/store"
 )
@@ -20,19 +21,37 @@ import (
 // Server holds the HTTP handlers and their dependencies.
 type Server struct {
 	store    store.Store
+	identify *service.IdentifyService
+	registry *lines.Registry
 	mux      *http.ServeMux
 	started  time.Time
 	requests atomic.Int64
 }
 
-// NewServer builds the routes on top of the given store.
-func NewServer(st store.Store) *Server {
-	s := &Server{store: st, mux: http.NewServeMux(), started: time.Now()}
+// NewServer builds the routes on top of the given stores. The history
+// store keeps redshift/distance computation records; the catalogue
+// registry and identification-report store are separate surfaces, so
+// identification reports can never leak into computation history.
+func NewServer(st store.Store, registry *lines.Registry, idSvc *service.IdentifyService) *Server {
+	s := &Server{store: st, registry: registry, identify: idSvc, mux: http.NewServeMux(), started: time.Now()}
 	s.mux.HandleFunc("POST /api/v1/redshift", s.handleRedshift)
 	s.mux.HandleFunc("POST /api/v1/distance", s.handleDistance)
 	s.mux.HandleFunc("POST /api/v1/batch", s.handleBatch)
 	s.mux.HandleFunc("GET /api/v1/history", s.handleHistory)
 	s.mux.HandleFunc("GET /api/v1/demo", s.handleDemo)
+
+	// Rest-wavelength catalogues.
+	s.mux.HandleFunc("POST /api/v1/catalogs", s.handleCreateCatalog)
+	s.mux.HandleFunc("GET /api/v1/catalogs", s.handleListCatalogs)
+	s.mux.HandleFunc("GET /api/v1/catalogs/{id}", s.handleGetCatalog)
+	s.mux.HandleFunc("PATCH /api/v1/catalogs/{id}/lines/{lineId}", s.handleUpdateLine)
+
+	// Line identification and its reports.
+	s.mux.HandleFunc("POST /api/v1/identify", s.handleIdentify)
+	s.mux.HandleFunc("GET /api/v1/identifications", s.handleListReports)
+	s.mux.HandleFunc("GET /api/v1/identifications/{id}", s.handleGetReport)
+	s.mux.HandleFunc("POST /api/v1/identifications/{id}/replay", s.handleReplay)
+
 	s.mux.HandleFunc("GET /healthz", s.handleHealth)
 	s.mux.HandleFunc("GET /status", s.handleStatus)
 	return s

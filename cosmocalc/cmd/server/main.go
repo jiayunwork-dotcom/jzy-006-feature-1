@@ -12,7 +12,10 @@ import (
 	"time"
 
 	"cosmocalc/internal/api"
+	"cosmocalc/internal/lines"
+	"cosmocalc/internal/service"
 	"cosmocalc/internal/store"
+	"cosmocalc/internal/wiring"
 )
 
 func main() {
@@ -24,10 +27,17 @@ func main() {
 	}
 
 	var st store.Store
+	var catalogRepo lines.CatalogRepository
+	var reportRepo service.ReportRepository
+
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
 		logger.Println("DATABASE_URL not set: falling back to in-memory store (history is not persisted)")
 		st = store.NewMemStore()
+		// In ephemeral mode custom catalogues and identification reports
+		// live in memory as well.
+		catalogRepo = store.NewMemCatalogs()
+		reportRepo = store.NewMemReports()
 	} else {
 		ctx, cancel := context.WithTimeout(context.Background(), 40*time.Second)
 		pg, err := store.NewPostgresStore(ctx, dsn)
@@ -37,12 +47,17 @@ func main() {
 		}
 		logger.Println("connected to PostgreSQL")
 		st = pg
+		catalogRepo = wiring.CatalogAdapter{Store: pg}
+		reportRepo = wiring.ReportAdapter{Store: pg}
 	}
 	defer st.Close()
 
+	registry := lines.NewRegistry(catalogRepo)
+	identifySvc := service.NewIdentifyService(registry, reportRepo)
+
 	srv := &http.Server{
 		Addr:              ":" + port,
-		Handler:           api.NewServer(st),
+		Handler:           api.NewServer(st, registry, identifySvc),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
