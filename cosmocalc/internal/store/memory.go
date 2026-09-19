@@ -8,13 +8,17 @@ import (
 
 // MemStore is an in-memory Store for tests and ephemeral runs.
 type MemStore struct {
-	mu      sync.Mutex
-	records []Record
-	nextID  int64
+	mu        sync.Mutex
+	records   []Record
+	nextID    int64
+	catalogs  []CatalogRecord
+	nextCatID int64
+	reports   []ReportRecord
+	nextRepID int64
 }
 
 // NewMemStore returns an empty in-memory store.
-func NewMemStore() *MemStore { return &MemStore{nextID: 1} }
+func NewMemStore() *MemStore { return &MemStore{nextID: 1, nextCatID: 1, nextRepID: 1} }
 
 // Save appends a record, assigning ID and timestamp.
 func (m *MemStore) Save(_ context.Context, rec *Record) error {

@@ -30,6 +30,21 @@ type Filter struct {
 type Store interface {
 	Save(ctx context.Context, rec *Record) error
 	List(ctx context.Context, f Filter) ([]Record, error)
+
+	// Rest-line catalogs (registered tables; the built-in default
+	// catalog lives in code and is not stored here).
+	SaveCatalog(ctx context.Context, cat *CatalogRecord) error
+	GetCatalog(ctx context.Context, id int64) (*CatalogRecord, error)
+	ListCatalogs(ctx context.Context) ([]CatalogRecord, error)
+	UpdateCatalog(ctx context.Context, cat *CatalogRecord) error
+
+	// Identification reports, persisted for every completed
+	// identification run (success or failure). They live apart from
+	// the computation history above and must never leak into it.
+	SaveReport(ctx context.Context, rep *ReportRecord) error
+	GetReport(ctx context.Context, id int64) (*ReportRecord, error)
+	ListReports(ctx context.Context, limit, offset int) ([]ReportRecord, error)
+
 	Ping(ctx context.Context) error
 	Close() error
 }

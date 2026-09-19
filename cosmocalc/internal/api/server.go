@@ -35,6 +35,7 @@ func NewServer(st store.Store) *Server {
 	s.mux.HandleFunc("GET /api/v1/demo", s.handleDemo)
 	s.mux.HandleFunc("GET /healthz", s.handleHealth)
 	s.mux.HandleFunc("GET /status", s.handleStatus)
+	s.registerIdentificationRoutes()
 	return s
 }
 

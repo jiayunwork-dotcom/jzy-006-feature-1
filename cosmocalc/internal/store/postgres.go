@@ -24,6 +24,28 @@ CREATE TABLE IF NOT EXISTS computations (
 );
 CREATE INDEX IF NOT EXISTS computations_type_idx ON computations (type);
 CREATE INDEX IF NOT EXISTS computations_created_idx ON computations (created_at DESC);
+
+-- Registered rest-line catalogs. Kept in their own table so registered
+-- and custom tables survive restarts alongside the computation history.
+CREATE TABLE IF NOT EXISTS line_catalogs (
+    id         BIGSERIAL PRIMARY KEY,
+    name       TEXT        NOT NULL,
+    unit       TEXT        NOT NULL,
+    lines      JSONB       NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Identification reports. Deliberately separate from computations:
+-- they are not computation history and must never appear in it.
+CREATE TABLE IF NOT EXISTS identification_reports (
+    id         BIGSERIAL PRIMARY KEY,
+    status     TEXT        NOT NULL,
+    request    JSONB       NOT NULL,
+    snapshot   JSONB       NOT NULL,
+    result     JSONB       NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 `
 
 // NewPostgresStore connects to the database, verifies the connection and
